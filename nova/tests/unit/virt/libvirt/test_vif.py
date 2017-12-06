@@ -1721,6 +1721,28 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                  filter="nova-instance-instance-00000001-22522562e2aa"/>
             </interface>""", cfg.to_xml())
 
+    def test_config_vfio(self):
+        driver = vif.LibvirtGenericVIFDriver()
+        vif_details = {"mdev_path": "/fake/mdev/path",
+                       "id": 123, "ring_layout": "fake-layout",
+                       "address": "fake-mac"}
+        conf = driver.get_config_vhostVFIO(None, vif_details, None,
+                                           None, None, None)
+        self.assertEqual(vif_details["mdev_path"], conf.path)
+        self.assertEqual(vif_details["ring_layout"], conf.ring_layout)
+        self.assertEqual(vif_details["id"], conf.uuid)
+        self.assertEqual(vif_details["address"], conf.address)
+
+    def test_config_vfio_no_path_or_layout(self):
+        driver = vif.LibvirtGenericVIFDriver()
+        vif_details = {"id": 123, "address": "fake-mac"}
+        conf = driver.get_config_vhostVFIO(None, vif_details, None,
+                                           None, None, None)
+        self.assertEqual("/sys/bus/mdev/devices/123", conf.path)
+        self.assertEqual("virtio", conf.ring_layout)
+        self.assertEqual(vif_details["id"], conf.uuid)
+        self.assertEqual(vif_details["address"], conf.address)
+
     @mock.patch("nova.network.os_vif_util.nova_to_osvif_instance")
     @mock.patch("nova.network.os_vif_util.nova_to_osvif_vif")
     def test_config_os_vif_hostdevice_ethernet(self, mock_convert_vif,

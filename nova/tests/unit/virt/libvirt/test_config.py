@@ -26,6 +26,84 @@ class LibvirtConfigBaseTest(test.NoDBTestCase):
         self.assertThat(actualXmlstr, matchers.XMLMatches(expectedXmlstr))
 
 
+class LibvirtConfigQemuCommandlineTest(LibvirtConfigBaseTest):
+
+    def test_no_args(self):
+        obj = config.LibvirtConfigQemuCommandline()
+        xml = obj.to_xml()
+
+        self.assertXmlEqual(
+        '<qemu:commandline '
+        'xmlns:qemu="http://libvirt.org/schemas/domain/qemu/1.0"/>', xml)
+
+    def test_with_args(self):
+        obj = config.LibvirtConfigQemuCommandline()
+        obj.args = ['my-first-arg', 'a-second-arg']
+        xml = obj.to_xml()
+
+        self.assertXmlEqual(
+        """<qemu:commandline xmlns:qemu="http://libvirt.org/schemas/domain/qemu/1.0">
+             <qemu:arg value="my-first-arg"/>
+             <qemu:arg value="a-second-arg"/>
+           </qemu:commandline>""", xml)
+
+
+class LibvirtConfigVhostVFIOTest(LibvirtConfigBaseTest):
+
+    def test_default(self):
+        obj = config.LibvirtConfigVhostVFIO()
+        xml = obj.to_xml()
+
+        self.assertXmlEqual(
+        """<qemu:commandline xmlns:qemu="http://libvirt.org/schemas/domain/qemu/1.0">
+             <qemu:arg value="-chardev"/>
+             <qemu:arg value="vfio,id=chardev-,sysfsdev=/sys/bus/mdev/"/>
+             <qemu:arg value="-netdev"/>
+             <qemu:arg value="vhost-vfio,id=netdev-,"""
+        """chardev=chardev-,ringlayout=virtio"/>
+             <qemu:arg value="-device"/>
+             <qemu:arg value="virtio-net-pci,netdev=netdev-,mac="/>
+           </qemu:commandline>""", xml)
+
+    def test_all_params_set(self):
+        obj = config.LibvirtConfigVhostVFIO()
+        obj.uuid = 'fake-uuid'
+        obj.ring_layout = 'fake-layout'
+        obj.path = '/some/fake/path'
+        obj.address = 'fake-mac'
+        xml = obj.to_xml()
+
+        self.assertXmlEqual(
+        """<qemu:commandline xmlns:qemu="http://libvirt.org/schemas/domain/qemu/1.0">
+             <qemu:arg value="-chardev"/>
+             <qemu:arg value="vfio,id=chardev-fake-uui,"""
+        """sysfsdev=/some/fake/path"/>
+             <qemu:arg value="-netdev"/>
+             <qemu:arg value="vhost-vfio,id=netdev-fake-uuid,"""
+        """chardev=chardev-fake-uui,ringlayout=fake-layout"/>
+             <qemu:arg value="-device"/>
+             <qemu:arg value="virtio-net-pci,"""
+        """netdev=netdev-fake-uuid,mac=fake-mac"/>
+           </qemu:commandline>""", xml)
+
+    def test_path_from_uuid(self):
+        obj = config.LibvirtConfigVhostVFIO()
+        obj.uuid = 'fake-uuid'
+        xml = obj.to_xml()
+
+        self.assertXmlEqual(
+        """<qemu:commandline xmlns:qemu="http://libvirt.org/schemas/domain/qemu/1.0">
+             <qemu:arg value="-chardev"/>
+             <qemu:arg value="vfio,id=chardev-fake-uui,"""
+        """sysfsdev=/sys/bus/mdev/fake-uuid"/>
+             <qemu:arg value="-netdev"/>
+             <qemu:arg value="vhost-vfio,id=netdev-fake-uuid,"""
+        """chardev=chardev-fake-uui,ringlayout=virtio"/>
+             <qemu:arg value="-device"/>
+             <qemu:arg value="virtio-net-pci,netdev=netdev-fake-uuid,mac="/>
+           </qemu:commandline>""", xml)
+
+
 class LibvirtConfigTest(LibvirtConfigBaseTest):
 
     def test_config_plain(self):

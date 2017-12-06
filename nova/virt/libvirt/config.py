@@ -37,6 +37,8 @@ from nova.virt import hardware
 
 # Namespace to use for Nova specific metadata items in XML
 NOVA_NS = "http://openstack.org/xmlns/libvirt/nova/1.0"
+# Namespace to use for qemu specific items in XML
+QEMU_NS = "http://libvirt.org/schemas/domain/qemu/1.0"
 
 
 class LibvirtConfigObject(object):
@@ -78,6 +80,57 @@ class LibvirtConfigObject(object):
         xml_str = etree.tostring(root, encoding='unicode',
                                  pretty_print=pretty_print)
         return xml_str
+
+
+class LibvirtConfigQemuCommandline(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigQemuCommandline, self).__init__(
+            root_name="commandline", ns_prefix="qemu",
+            ns_uri=QEMU_NS, **kwargs)
+        self.args = []
+
+    def format_dom(self):
+        etree.register_namespace('qemu', QEMU_NS)
+        root = super(LibvirtConfigQemuCommandline, self).format_dom()
+        for arg in self.args:
+            elm = etree.SubElement(root, "{%s}arg" % QEMU_NS)
+            elm.set("value", str(arg))
+
+        return root
+
+
+class LibvirtConfigVhostVFIO(LibvirtConfigQemuCommandline):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigVhostVFIO, self).__init__(
+             **kwargs)
+        self.uuid = ""
+        self.path = ""
+        self.ring_layout = "virtio"
+        self.address = ""
+
+    def format_dom(self):
+        chardev = ("chardev-%s" % self.uuid)[:16]
+        netdev = ("netdev-%s" % self.uuid)[:16]
+        path = (self.path if self.path
+                else "/sys/bus/mdev/%s" % self.uuid)
+        layout = self.ring_layout
+        self.args = ["-chardev",
+            "vfio,id=%(chardev)s,sysfsdev=%(path)s" % {
+                "chardev": chardev,
+                "path": path},
+            "-netdev",
+            "vhost-vfio,id=%(netdev)s,chardev=%(chardev)s," % {
+                "chardev": chardev,
+                "netdev": netdev,
+            } +
+            "ringlayout=%(layout)s" % {"layout": layout},
+            "-device",
+            "virtio-net-pci,netdev=%(netdev)s,mac=%(mac)s" % {
+                 "netdev": netdev, "mac": self.address}
+            ]
+        return super(LibvirtConfigVhostVFIO, self).format_dom()
 
 
 class LibvirtConfigCaps(LibvirtConfigObject):

@@ -431,6 +431,16 @@ class LibvirtGenericVIFDriver(object):
 
         return conf
 
+    def get_config_vhostVFIO(self, instance, vif, image_meta,
+                            inst_type, virt_type, host):
+        conf = vconfig.LibvirtConfigVhostVFIO()
+        conf.uuid = vif['id']
+        conf.path = vif.get('mdev_path',
+                            "/sys/bus/mdev/devices/%s" % vif['id'])
+        conf.ring_layout = vif.get('ring_layout', 'virtio')
+        conf.address = vif['address']
+        return conf
+
     def get_config_ib_hostdev(self, instance, vif, image_meta,
                               inst_type, virt_type, host):
         return self.get_base_hostdev_pci_config(vif)

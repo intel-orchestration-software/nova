@@ -2260,6 +2260,9 @@ class API(base_api.NetworkAPI):
                           False)):
             bridge = port_details.get(network_model.VIF_DETAILS_BRIDGE_NAME,
                                       "brq" + port['network_id'])
+        elif vif_type == network_model.VIF_TYPE_VHOST_VFIO:
+            bridge = port_details.get(network_model.VIF_DETAILS_BRIDGE_NAME,
+                                      CONF.neutron.ovs_bridge)
 
         # Prune the bridge name if necessary. For the DVS this is not done
         # as the bridge is a '<network-name>-<network-UUID>'.
